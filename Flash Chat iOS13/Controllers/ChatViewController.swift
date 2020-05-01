@@ -13,21 +13,39 @@ class ChatViewController: UIViewController {
     @IBOutlet weak var tableView: UITableView!
     @IBOutlet weak var messageTextfield: UITextField!
     let db = Firestore.firestore()
-    var messages: [Message] = [Message(sender: "rahul@xyz.com", body: "Hi"), Message(sender: "1@xyz.com", body: "bye"), Message(sender: "2@xyz.com", body: "Thik hai hello hello hello hello hello Thik hai hello hello hello hello helloThik hai hello hello hello hello hello")]
+    var messages: [Message] = []
     
     override func viewDidLoad() {
         super.viewDidLoad()
         tableView.dataSource = self
-//        tableView.delegate = self
         title = K.appName
         navigationItem.hidesBackButton = true
         tableView.register(UINib(nibName: K.cellNibName, bundle: nil), forCellReuseIdentifier: K.cellIdentifier)
+        loadMessages()
+    }
+    
+    func loadMessages() {
+        messages = []
+        db.collection(K.FStore.collectionName).getDocuments() { (querySnapshot, err) in
+            if let err = err {
+                print("Error getting documents: \(err)")
+            } else {
+                for document in querySnapshot!.documents {
+                    let sender = document.data()[K.FStore.senderField]
+                    let body = document.data()[K.FStore.bodyField]
+                    let message = Message(sender: sender as! String, body: body as! String)
+                    self.messages.append(message)
+                    DispatchQueue.main.async {
+                        self.tableView.reloadData()
+                    }
+                }
+            }
+        }
     }
     
     @IBAction func sendPressed(_ sender: UIButton) {
-//        self.performSegue(withIdentifier: "ChatView", sender: self)
         if let messageBody = messageTextfield.text, let messageSender = Auth.auth().currentUser?.email {
-            db.collection(K.FStore.collectionName).addDocument(data: [
+            if !messageBody.isEmpty { db.collection(K.FStore.collectionName).addDocument(data: [
                 K.FStore.bodyField: messageBody,
                 K.FStore.senderField: messageSender,
             ]) { err in
@@ -35,6 +53,7 @@ class ChatViewController: UIViewController {
                     print("Error adding document: \(err)")
                 } else {
                     print("Document added")
+                }
                 }
             }
         }
@@ -61,7 +80,6 @@ extension ChatViewController: UITableViewDataSource {
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: K.cellIdentifier, for: indexPath) as! MessageCell
         cell.label?.text = messages[indexPath.row].body
-//        cell.detailTextLabel?.text = messages[indexPath.row].body
         return cell
     }
 }
