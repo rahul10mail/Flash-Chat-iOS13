@@ -25,11 +25,13 @@ class ChatViewController: UIViewController {
     }
     
     func loadMessages() {
-        messages = []
-        db.collection(K.FStore.collectionName).getDocuments() { (querySnapshot, err) in
+        db.collection(K.FStore.collectionName)
+        .order(by: K.FStore.dateField)
+        .addSnapshotListener() { (querySnapshot, err) in
             if let err = err {
                 print("Error getting documents: \(err)")
             } else {
+                self.messages = []
                 for document in querySnapshot!.documents {
                     let sender = document.data()[K.FStore.senderField]
                     let body = document.data()[K.FStore.bodyField]
@@ -39,6 +41,7 @@ class ChatViewController: UIViewController {
                         self.tableView.reloadData()
                     }
                 }
+                print(self.messages.count)
             }
         }
     }
@@ -48,6 +51,7 @@ class ChatViewController: UIViewController {
             if !messageBody.isEmpty { db.collection(K.FStore.collectionName).addDocument(data: [
                 K.FStore.bodyField: messageBody,
                 K.FStore.senderField: messageSender,
+                K.FStore.dateField: Date()
             ]) { err in
                 if let err = err {
                     print("Error adding document: \(err)")
